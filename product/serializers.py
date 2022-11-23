@@ -2,9 +2,9 @@ from rest_framework import serializers
 from django.contrib.auth.models import User
 from .models import(
     Brand,
+    Payment,
     Product,
     Cart,
-    Order,
     Wishlist
     )
 
@@ -49,11 +49,13 @@ class BrandSerializer(serializers.ModelSerializer):
         fields = ('id', 'name', 'logo')
 
 class CartSerializer(serializers.ModelSerializer):
+    user = serializers.CharField(
+        source='order.user', read_only=True)
     class Meta:
         model = Cart
         fields = ('id', 'user', 'product', 'price','quantity',  'date', 'is_active', 'created_on',
                   'updated_on')
-        read_only_fields = ('created_on', 'updated_on','date','is_active', 'price')
+        read_only_fields = ('created_on', 'updated_on','date','is_active', 'price','user')
 
 
 
@@ -62,3 +64,20 @@ class WishlistSerializer(serializers.ModelSerializer):
         model = Wishlist
         fields = ('id', 'user', 'product')
         read_only_fields = ('created_on', 'updated_on')
+
+
+
+class PaymentSerializer(serializers.ModelSerializer):
+    """
+    Serializer to CRUD payments for an order.
+    """
+    user = serializers.CharField(
+        source='order.user', read_only=True)
+
+    class Meta:
+        model = Payment
+        fields = ('id', 'user', 
+                  'order_id','transaction_id','payment_status' )
+        read_only_fields = ('status', )
+
+

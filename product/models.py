@@ -2,13 +2,14 @@ from functools import cached_property
 from django.db import models
 from django.contrib.auth.models import User
 
-PENDING = 'P'
-COMPLETED = 'C'
-FAILED = 'F'
-
-
-STATUS_CHOICES = ((PENDING, ('pending')), (COMPLETED,
-                      ('completed')), (FAILED, ('failed')))
+FAILED = 0
+SUCCESS = 1
+PENDING = 2
+Order_choices = [
+    (PENDING, 'PENDING'),
+    (SUCCESS, 'sucess'),
+    (FAILED, 'failed'),
+]
 
 
 class TimeStampBaseModel(models.Model):
@@ -56,54 +57,17 @@ class Wishlist(TimeStampBaseModel):
 
 
 class Order(TimeStampBaseModel):
-   
-    buyer = models.ForeignKey(
-        User, related_name='orders', on_delete=models.CASCADE)
-    status = models.CharField(
-        max_length=1, choices=STATUS_CHOICES, default=PENDING)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    items = models.ManyToManyField(Cart)
+    order_status = models.IntegerField(
+        choices=Order_choices,
+        default=PENDING
+    )
 
-    class Meta:
-        ordering = ('-created_on', )
-
-    def __str__(self):
-        return self.buyer.get_full_name()
-
-    @cached_property
-    def total_cost(self):
-        """
-        Total cost of all the items in an order
-        """
-        return round(sum([order_item.cost for order_item in self.order_items.all()]), 2)
-
-
-class OrderItem(TimeStampBaseModel):
-    order = models.ForeignKey(
-        Order, related_name="order_items", on_delete=models.CASCADE)
-    product = models.ForeignKey(
-        Product, related_name="product_orders", on_delete=models.CASCADE)
-    quantity = models.IntegerField()
-
-    class Meta:
-        ordering = ('-created_on', )
-
-    def __str__(self):
-        return self.order.buyer
-
-    @cached_property
-    def cost(self):
-        """
-        Total cost of the ordered item
-        """
-        return round(self.quantity * self.product.price, 2)
-    
-class Payment(TimeStampBaseModel):
- 
-    status = models.CharField(
-        max_length=1, choices=STATUS_CHOICES, default=PENDING)
-    order = models.OneToOneField(
-        Order, related_name='payment', on_delete=models.CASCADE)
-    class Meta:
-        ordering = ('-created_on', )
-
-    def __str__(self):
-        return self.order.buyer
+class Payment(models.Model):
+     order_id =  models.ForeignKey(Order, on_delete=models.CASCADE)
+     payment_status = models.IntegerField(
+        choices=Order_choices,
+        default=PENDING
+    )
+     transaction_id = models.CharField(max_length=100)

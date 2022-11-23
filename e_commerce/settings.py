@@ -118,6 +118,13 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.1/howto/static-files/
 
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework.authentication.TokenAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ),
+}
+
 
 STATIC_URL = 'static/'
 STRIPE_PUBLISHABLE_KEY ='pk_test_51M0fZUSJedpYswPhdM9vIJiddaoxhXCGEbppzzbef3Nrl33AiHp3iEvMulHvZUbEjVc3aOJ6JFuD43Dp70J57qed00iX3ABxn3'
