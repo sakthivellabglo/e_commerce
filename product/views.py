@@ -21,6 +21,7 @@ from .serializers import (
     CartSerializer,
     CreateuserSerializers,
     Loginserializer,
+    OrderSerializer,
     PaymentSerializer,
     ProductSerializer,
     WishlistSerializer
@@ -114,6 +115,12 @@ class CreateDeleteLikeView(viewsets.ModelViewSet):
             return
         serializer.save()
 
+class OrderList(viewsets.ModelViewSet):
+
+    queryset = Order.objects.all()
+    serializer_class = OrderSerializer
+    pagination_class = LargeResultsSetPagination
+
 
 class PaymentViewSet(viewsets.ModelViewSet):
     """
@@ -137,11 +144,13 @@ class StripeCheckoutSessionCreateAPIView(APIView):
     """
 
     def post(self, request, *args, **kwargs):
-        cart = Cart.objects.filter(Q(user=request.user))
+        cart = Cart.objects.filter(Q(user=request.user) & Q(is_active=True))
         order_items = []
         orders = Order.objects.create(
             user=request.user)
         orders.items.add(*cart)
+        cart.update(is_active=False)
+        orders.save()
 
         for order_item in cart:
             product = order_item.product

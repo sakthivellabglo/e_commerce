@@ -2,6 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth.models import User
 from .models import(
     Brand,
+    Order,
     Payment,
     Product,
     Cart,
@@ -79,5 +80,14 @@ class PaymentSerializer(serializers.ModelSerializer):
         fields = ('id', 'user', 
                   'order_id','transaction_id','payment_status' )
         read_only_fields = ('status', )
+
+
+class OrderSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Order
+        fields = ('id', 'user', 
+                  'items','order_status' )
+        read_only_fields = ('order_status', )
 
 

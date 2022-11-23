@@ -6,6 +6,7 @@ from .views import(
     CartList,
     CreateDeleteLikeView,
     LoginView,
+    OrderList,
     PaymentViewSet,
     ProductList, 
     Register,
@@ -23,6 +24,8 @@ router.register('brand', BrandList)
 router.register('cart', CartList)
 router.register('like', CreateDeleteLikeView)
 router.register('payment', PaymentViewSet)
+router.register('order', OrderList)
+
 urlpatterns = [
     path('',include(router.urls)),
     path('login/', LoginView.as_view(), name = 'login'),
