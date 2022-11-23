@@ -53,7 +53,7 @@ class CartSerializer(serializers.ModelSerializer):
         model = Cart
         fields = ('id', 'user', 'product', 'price','quantity',  'date', 'is_active', 'created_on',
                   'updated_on')
-        read_only_fields = ('created_on', 'updated_on','date','is_active', )
+        read_only_fields = ('created_on', 'updated_on','date','is_active', 'price')
 
 
 

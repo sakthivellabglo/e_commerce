@@ -72,26 +72,14 @@ class CartList(viewsets.ModelViewSet):
     queryset = Cart.objects.all()
     serializer_class = CartSerializer
 
-    def list(self, request, *args, **kwargs):
-        queryset = self.filter_queryset(self.get_queryset())
-        queryset = queryset.filter((Q(user=request.user)))
-        print("queryset of list", queryset)
+    def perform_create(self, serializer):
+        product= self.request.data['product']
+        product =Product.objects.get(id=product)
+        quantity = self.request.data['quantity']
+        product_price = product.price*int(quantity)
+        serializer.save(user=self.request.user, 
+                        price = product_price )
 
-        for tweet in queryset:
-            print(tweet.id)
-            cart = Cart.objects.get(id=tweet.id)
-            tweet.price = cart.product.price
-            tweet.save()
-
-        page = self.paginate_queryset(queryset)
-        print("return the iteralble queryset", page)
-
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
-
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
 
 
 class CreateDeleteLikeView(viewsets.ModelViewSet):
@@ -110,27 +98,3 @@ class CreateDeleteLikeView(viewsets.ModelViewSet):
             return
         serializer.save()
 
-class StripeCheckOutView(viewsets.ModelViewSet):
-    queryset = Cart.objects.all()
-    serializer_class = CartSerializer
-    def create(self, request):
-        try:
-            checkout_session = stripe.checkout.Session.create(
-                line_items=[
-                    {
-                        # Provide the exact Price ID  of the product you want to sell
-                        'price_data': {
-                              'currency': 'inr',
-                              'unit_amount': request.POST['price'],
-                               'product_data': {'name': "Product"}, 
-                              'quantity': 1
-                           }
-                        },
-                         ],
-                         mode='payment',
-                         )
-                         
-            return redirect(checkout_session.url)
-        except: 
-            return
-# Create your views here.

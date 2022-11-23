@@ -87,7 +87,7 @@ class OrderItem(TimeStampBaseModel):
         ordering = ('-created_on', )
 
     def __str__(self):
-        return self.order.buyer.get_full_name()
+        return self.order.buyer
 
     @cached_property
     def cost(self):
@@ -106,4 +106,4 @@ class Payment(TimeStampBaseModel):
         ordering = ('-created_on', )
 
     def __str__(self):
-        return self.order.buyer.get_full_name()
+        return self.order.buyer
