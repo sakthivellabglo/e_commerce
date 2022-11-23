@@ -144,22 +144,22 @@ class StripeCheckoutSessionCreateAPIView(APIView):
     """
 
     def post(self, request, *args, **kwargs):
-        cart = Cart.objects.filter(Q(user=request.user) & Q(is_active=True))
+        cart = Cart.objects.filter(Q(user=request.user))
         order_items = []
         orders = Order.objects.create(
             user=request.user)
         orders.items.add(*cart)
-        cart.update(is_active=False)
         orders.save()
 
         for order_item in cart:
+            print("fbgdfcbhxfgbhfcxb fbdfcxbhfgxcbh fcgbhfgbhfsghfs")
             product = order_item.product
             quantity = order_item.quantity
 
             data = {
                 'price_data': {
                     'currency': 'inr',
-                    'unit_amount': product.price,
+                    'unit_amount':  int(product.price * 100),
                     'product_data': {
                         'name': product.title,
                         'description': product.description,
@@ -170,7 +170,7 @@ class StripeCheckoutSessionCreateAPIView(APIView):
             }
 
             order_items.append(data)
-            print(order_items)
+            print("jukjuyjkyujty yjtgtyjtyj hutyjtyjty",order_items)
         checkout_session = stripe.checkout.Session.create(
             payment_method_types=['card'],
             line_items=order_items,
@@ -206,6 +206,22 @@ class StripeWebhookAPIView(APIView):
 
             order = get_object_or_404(Order, id=order_id)
             order.order_status = 1
+            Cart.objects.all().delete()
+            order.save()
+        elif payload["type"] == "checkout.session.expired":
+            session = payload['data']['object']
+
+            order_id = session['metadata']['order_id']
+            print('Payment successfull')
+
+            payment = get_object_or_404(Payment, order_id=order_id)
+            print("thr payment is ", payment)
+            payment.payment_status = 0
+            payment.save()
+            Cart.objects.all().delete()
+
+            order = get_object_or_404(Order, id=order_id)
+            order.order_status = 0
             order.save()
 
         return Response(status=status.HTTP_200_OK)
