@@ -14,6 +14,8 @@ from django.shortcuts import get_object_or_404
 from django.db.models import Q
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login
+from django.conf import settings
+from django.db.models import Sum
 
 from .models import Brand, Cart, Order, Payment, Product, Wishlist
 from .serializers import (
@@ -28,8 +30,8 @@ from .serializers import (
 )
 
 
-endpoint_secret = 'whsec_e0a586f0438ef2272488a985e956d2b1b87f3a79cb61f781fc9530ead00c6c04 '
-stripe.api_key = 'sk_test_51M0fZUSJedpYswPhm7MNkYmbVQt2jmmZXNROdSaM73KQ11Y7kkJllXki6I1NIvsMR7XLQfisvlrVKXfaozRd5ZHR00VvOF4Vhq'
+endpoint_secret = settings.STRIPE_WEBHOOK_SECRET
+stripe.api_key = settings.STRIPE_SECRET_KEY
 
 
 class LargeResultsSetPagination(PageNumberPagination):
@@ -115,6 +117,7 @@ class CreateDeleteLikeView(viewsets.ModelViewSet):
             return
         serializer.save()
 
+
 class OrderList(viewsets.ModelViewSet):
 
     queryset = Order.objects.all()
@@ -131,7 +134,6 @@ class PaymentViewSet(viewsets.ModelViewSet):
     pagination_class = LargeResultsSetPagination
     permission_classes = [IsAuthenticated]
 
-
     def get_queryset(self):
         res = super().get_queryset()
         user = self.request.user
@@ -144,47 +146,52 @@ class StripeCheckoutSessionCreateAPIView(APIView):
     """
 
     def post(self, request, *args, **kwargs):
-        cart = Cart.objects.filter(Q(user=request.user))
-        order_items = []
-        orders = Order.objects.create(
-            user=request.user)
-        orders.items.add(*cart)
-        orders.save()
+        cart = Cart.objects.filter(Q(user=request.user) & Q(is_active=True))
+        try:
+            order_items = []
+            orders = Order.objects.create(
+                user=request.user, total_price=cart.aggregate(Sum('price'))['price__sum'])
+            orders.items.add(*cart)
+            orders.save()
 
-        for order_item in cart:
-            print("fbgdfcbhxfgbhfcxb fbdfcxbhfgxcbh fcgbhfgbhfsghfs")
-            product = order_item.product
-            quantity = order_item.quantity
+            for order_item in cart:
+                print("fbgdfcbhxfgbhfcxb fbdfcxbhfgxcbh fcgbhfgbhfsghfs")
+                product = order_item.product
+                quantity = order_item.quantity
+                print("gtrgdgdgdfgdfg dfgdfgdf", product.image)
 
-            data = {
-                'price_data': {
-                    'currency': 'inr',
-                    'unit_amount':  int(product.price * 100),
-                    'product_data': {
-                        'name': product.title,
-                        'description': product.description,
-                        'images': [product.image]
-                    }
+                data = {
+                    'price_data': {
+                        'currency': 'inr',
+                        'unit_amount':  int(product.price * 100),
+                        'product_data': {
+                            'name': product.title,
+                            'description': product.description,
+                            'images': ["http://127.0.0.1:8000/" + str(product.image)]
+                        }
+                    },
+                    'quantity': quantity,
+
+                }
+
+                order_items.append(data)
+                print("jukjuyjkyujty yjtgtyjtyj hutyjtyjty", order_items)
+            checkout_session = stripe.checkout.Session.create(
+                payment_method_types=['card'],
+                line_items=order_items,
+                metadata={
+                    "order_id": orders.id,
                 },
-                'quantity': quantity
-            }
-
-            order_items.append(data)
-            print("jukjuyjkyujty yjtgtyjtyj hutyjtyjty",order_items)
-        checkout_session = stripe.checkout.Session.create(
-            payment_method_types=['card'],
-            line_items=order_items,
-            metadata={
-                "order_id": orders.id
-            },
-            mode='payment',
-            success_url="http://127.0.0.1:8000/payment/",
-            cancel_url="http://127.0.0.1:8000/payment/"
-        )
-        Payment.objects.create(
-            order_id=orders, transaction_id=checkout_session["id"])
-        print(checkout_session.url)
-        return Response({'sessionId': checkout_session['id']}, status=status.HTTP_201_CREATED)
+                mode='payment',
+                success_url="http://127.0.0.1:8000/payment/",
+                cancel_url="http://127.0.0.1:8000/payment/"
+            )
+            Payment.objects.create(
+                order_id=orders, transaction_id=checkout_session["id"], total_price=cart.aggregate(Sum('price'))['price__sum'])
+            print(checkout_session.url)
+            return Response({'sessionId': checkout_session['id'],'sesstion url':checkout_session.url}, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_404_NOT_FOUND)
 
 
 class StripeWebhookAPIView(APIView):
@@ -206,8 +213,10 @@ class StripeWebhookAPIView(APIView):
 
             order = get_object_or_404(Order, id=order_id)
             order.order_status = 1
-            Cart.objects.all().delete()
             order.save()
+            cart = Cart.objects.filter(is_active=True)
+            cart.update(is_active=False)
+
         elif payload["type"] == "checkout.session.expired":
             session = payload['data']['object']
 
@@ -218,8 +227,8 @@ class StripeWebhookAPIView(APIView):
             print("thr payment is ", payment)
             payment.payment_status = 0
             payment.save()
-            Cart.objects.all().delete()
-
+            cart = Cart.objects.filter(is_active=True)
+            cart.update(is_active=False)
             order = get_object_or_404(Order, id=order_id)
             order.order_status = 0
             order.save()

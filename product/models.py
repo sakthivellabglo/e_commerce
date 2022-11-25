@@ -57,6 +57,7 @@ class Wishlist(TimeStampBaseModel):
 
 
 class Order(TimeStampBaseModel):
+    total_price = models.IntegerField()
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     items = models.ManyToManyField(Cart)
     order_status = models.IntegerField(
@@ -65,6 +66,7 @@ class Order(TimeStampBaseModel):
     )
 
 class Payment(models.Model):
+     total_price = models.IntegerField()
      order_id =  models.ForeignKey(Order, on_delete=models.CASCADE)
      payment_status = models.IntegerField(
         choices=Order_choices,
